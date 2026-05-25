@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Project OS</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #090c12;
+    --bg2: #0e1320;
+    --bg3: #141b2d;
+    --card: #111827;
+    --card2: #1a2235;
+    --border: #1f2d47;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --gold: #f59e0b;
+    --green: #10b981;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #4a5568;
+    --glow: 0 0 20px rgba(0,212,255,0.3);
+    --glow-gold: 0 0 20px rgba(245,158,11,0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    padding-bottom: 80px;
+  }
+
+  /* SCAN LINE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,212,255,0.015) 2px, rgba(0,212,255,0.015) 4px);
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* HEADER */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(9,12,18,0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .logo {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    text-shadow: var(--glow);
+  }
+
+  .xp-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .level-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gold);
+    background: rgba(245,158,11,0.15);
+    border: 1px solid rgba(245,158,11,0.4);
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .xp-bar {
+    width: 90px;
+    height: 6px;
+    background: var(--bg3);
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 3px;
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  /* PROJECT SWITCHER */
+  .project-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+
+  .project-row::-webkit-scrollbar { display: none; }
+
+  .proj-chip {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text2);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .proj-chip.active {
+    background: rgba(0,212,255,0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 12px rgba(0,212,255,0.2);
+  }
+
+  .proj-chip.add-btn {
+    border-style: dashed;
+    color: var(--text3);
+    font-size: 18px;
+    padding: 3px 10px;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 90;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 12px 4px;
+    text-align: center;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text3);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .tab-icon { font-size: 16px; display: block; margin-bottom: 2px; }
+
+  /* CONTENT */
+  .content { padding: 16px; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* CARDS */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .card-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-title span { color: var(--accent); }
+
+  /* STATS ROW */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .stat-box {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--text3);
+    margin-top: 4px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ROADMAP */
+  .roadmap { position: relative; padding-left: 24px; }
+
+  .roadmap::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--accent), var(--accent2), transparent);
+  }
+
+  .rm-item {
+    position: relative;
+    margin-bottom: 20px;
+    animation: fadeSlide 0.4s ease both;
+  }
+
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .rm-dot {
+    position: absolute;
+    left: -20px;
+    top: 6px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--bg);
+    transition: all 0.2s;
+  }
+
+  .rm-dot.done { background: var(--green); border-color: var(--green); box-shadow: 0 0 8px var(--green); }
+  .rm-dot.active { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 12px var(--accent); }
+  .rm-dot.pending { background: var(--bg3); border-color: var(--text3); }
+
+  .rm-date {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    margin-bottom: 3px;
+  }
+
+  .rm-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+
+  .rm-title.done { text-decoration: line-through; color: var(--text3); }
+
+  .rm-desc {
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  .rm-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 4px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .rm-badge.done { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+  .rm-badge.inprog { background: rgba(0,212,255,0.1); color: var(--accent); border: 1px solid rgba(0,212,255,0.3); }
+  .rm-badge.soon { background: rgba(124,58,237,0.15); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
+
+  /* TASKS */
+  .task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .task-item:last-child { border-bottom: none; }
+
+  .task-check {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    margin-top: 1px;
+  }
+
+  .task-check.checked {
+    background: var(--green);
+    border-color: var(--green);
+    box-shadow: 0 0 8px rgba(16,185,129,0.4);
+  }
+
+  .task-check.checked::after { content: '✓'; color: white; font-size: 12px; font-weight: 700; }
+
+  .task-body { flex: 1; }
+
+  .task-text {
+    font-size: 14px;
+    color: var(--text);
+    transition: color 0.2s;
+    line-height: 1.4;
+  }
+
+  .task-text.done { color: var(--text3); text-decoration: line-through; }
+
+  .task-meta {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+    align-items: center;
+  }
+
+  .task-xp {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--gold);
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.2);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .task-pri {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .task-pri.high { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+  .task-pri.mid { background: rgba(245,158,11,0.1); color: var(--gold); border: 1px solid rgba(245,158,11,0.2); }
+  .task-pri.low { background: rgba(100,116,139,0.1); color: var(--text3); border: 1px solid var(--border); }
+
+  /* IDEAS */
+  .idea-item {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent2);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    animation: fadeSlide 0.3s ease both;
+  }
+
+  .idea-item.starred { border-left-color: var(--gold); }
+
+  .idea-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+  }
+
+  .idea-title { font-size: 14px; font-weight: 500; color: var(--text); }
+
+  .idea-star { cursor: pointer; font-size: 16px; line-height: 1; }
+
+  .idea-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
+
+  .idea-date {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    margin-top: 6px;
+  }
+
+  /* ACHIEVEMENTS */
+  .achieve-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .achieve-item {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+    opacity: 0.4;
+    transition: all 0.3s;
+  }
+
+  .achieve-item.unlocked {
+    opacity: 1;
+    border-color: rgba(245,158,11,0.4);
+    background: rgba(245,158,11,0.05);
+    box-shadow: 0 0 12px rgba(245,158,11,0.15);
+  }
+
+  .achieve-icon { font-size: 28px; margin-bottom: 4px; }
+
+  .achieve-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text2);
+    line-height: 1.2;
+  }
+
+  /* STREAK */
+  .streak-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(239,68,68,0.05));
+    border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 12px;
+    margin-bottom: 12px;
+  }
+
+  .streak-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--gold);
+    line-height: 1;
+    text-shadow: 0 0 20px rgba(245,158,11,0.5);
+  }
+
+  .streak-label { font-size: 12px; color: var(--text2); }
+  .streak-label strong { display: block; font-size: 16px; color: var(--gold); font-family: 'Rajdhani', sans-serif; font-weight: 700; letter-spacing: 1px; }
+
+  /* BUTTONS */
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    color: var(--accent);
+  }
+
+  .btn-primary:active { background: rgba(0,212,255,0.2); transform: scale(0.98); }
+
+  .btn-gold {
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.3);
+    color: var(--gold);
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 500;
+    backdrop-filter: blur(4px);
+    align-items: flex-end;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    padding: 20px;
+    width: 100%;
+    animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .modal-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  .form-group { margin-bottom: 12px; }
+
+  .form-label {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 6px;
+    display: block;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+  }
+
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-input:focus, .form-textarea:focus { border-color: var(--accent); }
+
+  .form-textarea { resize: none; height: 80px; }
+
+  .form-row { display: flex; gap: 8px; }
+  .form-row .form-group { flex: 1; }
+
+  .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+
+  .btn-cancel {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+  }
+
+  .btn-submit {
+    flex: 2;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(0,212,255,0.3);
+  }
+
+  /* XP POPUP */
+  .xp-popup {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(245,158,11,0.95);
+    color: #000;
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 8px 20px;
+    border-radius: 20px;
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.4s;
+  }
+
+  .xp-popup.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* BOTTOM NAV */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(9,12,18,0.97);
+    border-top: 1px solid var(--border);
+    display: flex;
+    backdrop-filter: blur(20px);
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 200;
+  }
+
+  .nav-item {
+    flex: 1;
+    padding: 10px 4px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text3);
+  }
+
+  .nav-item.active { color: var(--accent); }
+
+  .nav-icon { font-size: 20px; display: block; margin-bottom: 2px; }
+
+  .nav-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text3);
+  }
+
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; line-height: 1.5; }
+
+  /* FAB */
+  .fab {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,212,255,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    transition: all 0.2s;
+  }
+
+  .fab:active { transform: scale(0.9); }
+
+  /* PROGRESS BAR */
+  .proj-progress {
+    margin-top: 8px;
+    height: 4px;
+    background: var(--bg3);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .proj-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  /* COLOR DOTS */
+  .color-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+  .color-dot {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .color-dot.selected { border-color: white; transform: scale(1.2); }
+
+  select option { background: #1a2235; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  .mini-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+  }
+
+  .no-project {
+    text-align: center;
+    padding: 60px 20px;
+  }
+
+  .no-project-icon { font-size: 60px; margin-bottom: 16px; }
+  .no-project-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text2);
+    margin-bottom: 8px;
+  }
+
+  .no-project-sub { font-size: 14px; color: var(--text3); margin-bottom: 24px; }
+</style>
+</head>
+<body>
+
+<!-- XP POPUP -->
+<div class="xp-popup" id="xpPopup">+0 XP</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div class="logo">PROJECT<span style="color:var(--text3)">://</span>OS</div>
+    <div class="xp-bar-wrap">
+      <div class="level-badge" id="levelBadge">LVL 1</div>
+      <div>
+        <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+        <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--text3);margin-top:2px;text-align:right" id="xpLabel">0/100 XP</div>
+      </div>
+    </div>
+  </div>
+  <div class="project-row" id="projectRow">
+    <div class="proj-chip add-btn" onclick="openModal('project')">＋</div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="tabs">
+  <div class="tab active" onclick="switchTab('roadmap',this)">
+    <span class="tab-icon">🗺</span>КАРТА
+  </div>
+  <div class="tab" onclick="switchTab('tasks',this)">
+    <span class="tab-icon">✅</span>ЗАДАЧИ
+  </div>
+  <div class="tab" onclick="switchTab('ideas',this)">
+    <span class="tab-icon">💡</span>ИДЕИ
+  </div>
+  <div class="tab" onclick="switchTab('stats',this)">
+    <span class="tab-icon">🏆</span>СТАТ
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- ROADMAP PANEL -->
+  <div class="panel active" id="panel-roadmap">
+    <div id="roadmapContent"></div>
+  </div>
+
+  <!-- TASKS PANEL -->
+  <div class="panel" id="panel-tasks">
+    <div id="tasksContent"></div>
+  </div>
+
+  <!-- IDEAS PANEL -->
+  <div class="panel" id="panel-ideas">
+    <div id="ideasContent"></div>
+  </div>
+
+  <!-- STATS PANEL -->
+  <div class="panel" id="panel-stats">
+    <div id="statsContent"></div>
+  </div>
+
+</div>
+
+<!-- FAB -->
+<button class="fab" id="fabBtn" onclick="handleFab()">＋</button>
+
+<!-- BOTTOM NAV (alternative navigation) -->
+
+<!-- MODALS -->
+
+<!-- PROJECT MODAL -->
+<div class="modal-overlay" id="modal-project">
+  <div class="modal">
+    <div class="modal-title">Новый проект</div>
+    <div class="form-group">
+      <label class="form-label">Название проекта</label>
+      <input class="form-input" id="proj-name" placeholder="Например: Свадьба Смирновых">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Описание</label>
+      <input class="form-input" id="proj-desc" placeholder="Краткое описание...">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Дедлайн</label>
+        <input class="form-input" id="proj-deadline" type="date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Цвет</label>
+      <div class="color-picker" id="colorPicker">
+        <div class="color-dot selected" data-color="#00d4ff" style="background:#00d4ff" onclick="selectColor(this)"></div>
+        <div class="color-dot" data-color="#7c3aed" style="background:#7c3aed" onclick="selectColor(this)"></div>
+        <div class="color-dot" data-color="#10b981" style="background:#10b981" onclick="selectColor(this)"></div>
+        <div class="color-dot" data-color="#f59e0b" style="background:#f59e0b" onclick="selectColor(this)"></div>
+        <div class="color-dot" data-color="#ef4444" style="background:#ef4444" onclick="selectColor(this)"></div>
+        <div class="color-dot" data-color="#f97316" style="background:#f97316" onclick="selectColor(this)"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('project')">Отмена</button>
+      <button class="btn-submit" onclick="addProject()">СОЗДАТЬ</button>
+    </div>
+  </div>
+</div>
+
+<!-- MILESTONE MODAL -->
+<div class="modal-overlay" id="modal-milestone">
+  <div class="modal">
+    <div class="modal-title">Этап / Milestone</div>
+    <div class="form-group">
+      <label class="form-label">Название этапа</label>
+      <input class="form-input" id="ms-title" placeholder="Например: Подписать договор">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Описание</label>
+      <input class="form-input" id="ms-desc" placeholder="Детали...">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Дата</label>
+        <input class="form-input" id="ms-date" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Статус</label>
+        <select class="form-input form-select" id="ms-status">
+          <option value="pending">Ожидает</option>
+          <option value="active">В работе</option>
+          <option value="done">Готово</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('milestone')">Отмена</button>
+      <button class="btn-submit" onclick="addMilestone()">ДОБАВИТЬ</button>
+    </div>
+  </div>
+</div>
+
+<!-- TASK MODAL -->
+<div class="modal-overlay" id="modal-task">
+  <div class="modal">
+    <div class="modal-title">Новая задача</div>
+    <div class="form-group">
+      <label class="form-label">Задача</label>
+      <input class="form-input" id="task-title" placeholder="Что нужно сделать?">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Приоритет</label>
+        <select class="form-input form-select" id="task-pri">
+          <option value="high">🔴 Высокий</option>
+          <option value="mid" selected>🟡 Средний</option>
+          <option value="low">⚪ Низкий</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">XP награда</label>
+        <select class="form-input form-select" id="task-xp">
+          <option value="5">5 XP</option>
+          <option value="10" selected>10 XP</option>
+          <option value="25">25 XP</option>
+          <option value="50">50 XP</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('task')">Отмена</button>
+      <button class="btn-submit" onclick="addTask()">ДОБАВИТЬ</button>
+    </div>
+  </div>
+</div>
+
+<!-- IDEA MODAL -->
+<div class="modal-overlay" id="modal-idea">
+  <div class="modal">
+    <div class="modal-title">Новая идея 💡</div>
+    <div class="form-group">
+      <label class="form-label">Заголовок</label>
+      <input class="form-input" id="idea-title" placeholder="Суть идеи одной строкой">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Описание</label>
+      <textarea class="form-textarea" id="idea-text" placeholder="Расскажи подробнее..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('idea')">Отмена</button>
+      <button class="btn-submit" onclick="addIdea()">СОХРАНИТЬ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================== STATE ==================
+let state = {
+  xp: 0,
+  level: 1,
+  streak: 0,
+  lastActive: null,
+  totalTasks: 0,
+  completedTasks: 0,
+  projects: [],
+  activeProject: null,
+  selectedColor: '#00d4ff',
+  currentTab: 'roadmap'
+};
+
+// ================== STORAGE ==================
+function save() {
+  try { localStorage.setItem('projectOS', JSON.stringify(state)); } catch(e) {}
+}
+
+function load() {
+  try {
+    const d = localStorage.getItem('projectOS');
+    if (d) state = JSON.parse(d);
+  } catch(e) {}
+}
+
+// ================== INIT ==================
+load();
+updateStreak();
+render();
+updateXPBar();
+
+// ================== STREAK ==================
+function updateStreak() {
+  const today = new Date().toDateString();
+  if (state.lastActive === today) return;
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  if (state.lastActive === yesterday) {
+    state.streak = (state.streak || 0) + 1;
+  } else if (state.lastActive !== today) {
+    if (state.lastActive) state.streak = 0;
+  }
+  state.lastActive = today;
+  save();
+}
+
+// ================== XP SYSTEM ==================
+function gainXP(amount) {
+  state.xp += amount;
+  const xpPerLevel = 100 + (state.level - 1) * 50;
+  if (state.xp >= xpPerLevel) {
+    state.xp -= xpPerLevel;
+    state.level++;
+    showXPPopup(`🎉 LEVEL UP! LVL ${state.level}`);
+    vibrate([100, 50, 100]);
+  } else {
+    showXPPopup(`+${amount} XP`);
+    vibrate([30]);
+  }
+  updateXPBar();
+  save();
+  renderStats();
+}
+
+function updateXPBar() {
+  const xpPerLevel = 100 + (state.level - 1) * 50;
+  const pct = Math.min(100, (state.xp / xpPerLevel) * 100);
+  document.getElementById('xpFill').style.width = pct + '%';
+  document.getElementById('xpLabel').textContent = `${state.xp}/${xpPerLevel} XP`;
+  document.getElementById('levelBadge').textContent = `LVL ${state.level}`;
+}
+
+function showXPPopup(text) {
+  const el = document.getElementById('xpPopup');
+  el.textContent = text;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+function vibrate(pattern) {
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch(e) {}
+}
+
+// ================== PROJECT ==================
+let selectedColor = '#00d4ff';
+
+function selectColor(el) {
+  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedColor = el.dataset.color;
+}
+
+function addProject() {
+  const name = document.getElementById('proj-name').value.trim();
+  if (!name) return shake('proj-name');
+  
+  const proj = {
+    id: Date.now(),
+    name,
+    desc: document.getElementById('proj-desc').value.trim(),
+    deadline: document.getElementById('proj-deadline').value,
+    color: selectedColor,
+    milestones: [],
+    tasks: [],
+    ideas: [],
+    created: new Date().toISOString()
+  };
+  
+  state.projects.push(proj);
+  state.activeProject = proj.id;
+  closeModal('project');
+  clearProjectForm();
+  gainXP(20);
+  render();
+  save();
+}
+
+function clearProjectForm() {
+  ['proj-name','proj-desc','proj-deadline'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+}
+
+function selectProject(id) {
+  state.activeProject = id;
+  save();
+  render();
+}
+
+function getActiveProject() {
+  return state.projects.find(p => p.id === state.activeProject);
+}
+
+// ================== MILESTONES ==================
+function addMilestone() {
+  const title = document.getElementById('ms-title').value.trim();
+  if (!title) return shake('ms-title');
+  
+  const proj = getActiveProject();
+  if (!proj) return;
+  
+  proj.milestones.push({
+    id: Date.now(),
+    title,
+    desc: document.getElementById('ms-desc').value.trim(),
+    date: document.getElementById('ms-date').value,
+    status: document.getElementById('ms-status').value
+  });
+  
+  closeModal('milestone');
+  ['ms-title','ms-desc','ms-date'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ms-status').value = 'pending';
+  gainXP(15);
+  save();
+  renderRoadmap();
+}
+
+function toggleMilestone(id) {
+  const proj = getActiveProject();
+  if (!proj) return;
+  const ms = proj.milestones.find(m => m.id === id);
+  if (!ms) return;
+  const statuses = ['pending', 'active', 'done'];
+  const idx = statuses.indexOf(ms.status);
+  ms.status = statuses[(idx + 1) % 3];
+  if (ms.status === 'done') gainXP(30);
+  save();
+  renderRoadmap();
+}
+
+// ================== TASKS ==================
+function addTask() {
+  const title = document.getElementById('task-title').value.trim();
+  if (!title) return shake('task-title');
+  
+  const proj = getActiveProject();
+  if (!proj) return;
+  
+  proj.tasks.push({
+    id: Date.now(),
+    title,
+    priority: document.getElementById('task-pri').value,
+    xp: parseInt(document.getElementById('task-xp').value),
+    done: false,
+    created: new Date().toISOString()
+  });
+  
+  state.totalTasks++;
+  closeModal('task');
+  document.getElementById('task-title').value = '';
+  save();
+  renderTasks();
+}
+
+function toggleTask(id) {
+  const proj = getActiveProject();
+  if (!proj) return;
+  const task = proj.tasks.find(t => t.id === id);
+  if (!task) return;
+  task.done = !task.done;
+  if (task.done) {
+    state.completedTasks++;
+    gainXP(task.xp);
+    state.streak = (state.streak || 0);
+  }
+  save();
+  renderTasks();
+  renderStats();
+}
+
+// ================== IDEAS ==================
+function addIdea() {
+  const title = document.getElementById('idea-title').value.trim();
+  if (!title) return shake('idea-title');
+  
+  const proj = getActiveProject();
+  if (!proj) return;
+  
+  proj.ideas.push({
+    id: Date.now(),
+    title,
+    text: document.getElementById('idea-text').value.trim(),
+    starred: false,
+    date: new Date().toLocaleDateString('ru-RU', {day:'numeric',month:'short'})
+  });
+  
+  closeModal('idea');
+  document.getElementById('idea-title').value = '';
+  document.getElementById('idea-text').value = '';
+  gainXP(10);
+  save();
+  renderIdeas();
+}
+
+function toggleStar(id) {
+  const proj = getActiveProject();
+  if (!proj) return;
+  const idea = proj.ideas.find(i => i.id === id);
+  if (!idea) return;
+  idea.starred = !idea.starred;
+  save();
+  renderIdeas();
+}
+
+// ================== RENDER ==================
+function render() {
+  renderProjects();
+  const tab = state.currentTab;
+  if (tab === 'roadmap') renderRoadmap();
+  else if (tab === 'tasks') renderTasks();
+  else if (tab === 'ideas') renderIdeas();
+  else if (tab === 'stats') renderStats();
+}
+
+function renderProjects() {
+  const row = document.getElementById('projectRow');
+  let html = '';
+  
+  state.projects.forEach(p => {
+    const isActive = p.id === state.activeProject;
+    html += `<div class="proj-chip ${isActive ? 'active' : ''}" 
+      style="${isActive ? `border-color:${p.color};color:${p.color};box-shadow:0 0 12px ${p.color}40` : ''}"
+      onclick="selectProject(${p.id})">${p.name}</div>`;
+  });
+  
+  html += `<div class="proj-chip add-btn" onclick="openModal('project')">＋</div>`;
+  row.innerHTML = html;
+}
+
+function renderRoadmap() {
+  const el = document.getElementById('roadmapContent');
+  const proj = getActiveProject();
+  
+  if (!proj) { el.innerHTML = noProjectHTML(); return; }
+  
+  const total = proj.milestones.length;
+  const done = proj.milestones.filter(m => m.status === 'done').length;
+  const pct = total ? Math.round((done/total)*100) : 0;
+  
+  const daysLeft = proj.deadline
+    ? Math.max(0, Math.ceil((new Date(proj.deadline) - new Date()) / 86400000))
+    : null;
+  
+  let html = `
+    <div class="card" style="border-color:${proj.color}30;background:linear-gradient(135deg,${proj.color}08,var(--card))">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:${proj.color};letter-spacing:1px">${proj.name}</div>
+          ${proj.desc ? `<div style="font-size:13px;color:var(--text2);margin-top:2px">${proj.desc}</div>` : ''}
+        </div>
+        ${daysLeft !== null ? `<div style="text-align:right"><div style="font-family:'Space Mono',monospace;font-size:24px;font-weight:700;color:${daysLeft < 7 ? 'var(--red)' : 'var(--gold)'}">${daysLeft}</div><div style="font-size:10px;color:var(--text3)">ДНЕЙ</div></div>` : ''}
+      </div>
+      <div style="margin-top:12px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px">
+          <span>ПРОГРЕСС</span><span>${done}/${total} этапов · ${pct}%</span>
+        </div>
+        <div class="proj-progress"><div class="proj-progress-fill" style="width:${pct}%;background:linear-gradient(90deg,${proj.color},${proj.color}88)"></div></div>
+      </div>
+    </div>`;
+  
+  if (proj.milestones.length === 0) {
+    html += `<div class="empty-state">
+      <div class="empty-icon">🗺️</div>
+      <div class="empty-text">Нет этапов. Добавь первый milestone!</div>
+    </div>`;
+  } else {
+    const sorted = [...proj.milestones].sort((a,b) => new Date(a.date||0) - new Date(b.date||0));
+    html += `<div class="card"><div class="card-title">ROADMAP <span>${total} этапов</span></div><div class="roadmap">`;
+    sorted.forEach(ms => {
+      const dateStr = ms.date ? new Date(ms.date).toLocaleDateString('ru-RU', {day:'numeric',month:'short'}) : '—';
+      const statusMap = {done:'done',active:'active',pending:'pending'};
+      const badgeMap = {done:['done','ГОТОВО'],active:['inprog','В РАБОТЕ'],pending:['soon','ОЖИДАЕТ']};
+      const [bc, bl] = badgeMap[ms.status];
+      html += `<div class="rm-item" onclick="toggleMilestone(${ms.id})">
+        <div class="rm-dot ${statusMap[ms.status]}"></div>
+        <div class="rm-date">${dateStr}</div>
+        <div class="rm-title ${ms.status==='done'?'done':''}">${ms.title}</div>
+        ${ms.desc ? `<div class="rm-desc">${ms.desc}</div>` : ''}
+        <span class="rm-badge ${bc}">${bl}</span>
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+  
+  html += `<button class="btn btn-primary" onclick="openModal('milestone')">＋ Добавить этап</button>`;
+  el.innerHTML = html;
+}
+
+function renderTasks() {
+  const el = document.getElementById('tasksContent');
+  const proj = getActiveProject();
+  
+  if (!proj) { el.innerHTML = noProjectHTML(); return; }
+  
+  const todo = proj.tasks.filter(t => !t.done);
+  const done = proj.tasks.filter(t => t.done);
+  
+  let html = '';
+  
+  if (proj.tasks.length === 0) {
+    html = `<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">Задач нет. Добавь первую!</div></div>`;
+  } else {
+    if (todo.length) {
+      html += `<div class="card"><div class="card-title">К ВЫПОЛНЕНИЮ <span>${todo.length}</span></div>`;
+      todo.sort((a,b) => {const p={'high':0,'mid':1,'low':2};return p[a.priority]-p[b.priority];}).forEach(t => {
+        html += taskHTML(t);
+      });
+      html += `</div>`;
+    }
+    if (done.length) {
+      html += `<div class="card"><div class="card-title">ВЫПОЛНЕНО <span>${done.length}</span></div>`;
+      done.forEach(t => { html += taskHTML(t); });
+      html += `</div>`;
+    }
+  }
+  
+  html += `<button class="btn btn-primary" onclick="openModal('task')">＋ Добавить задачу</button>`;
+  el.innerHTML = html;
+}
+
+function taskHTML(t) {
+  const priMap = {high:['high','ВЫСОКИЙ'],mid:['mid','СРЕДНИЙ'],low:['low','НИЗКИЙ']};
+  const [pc, pl] = priMap[t.priority];
+  return `<div class="task-item" onclick="toggleTask(${t.id})">
+    <div class="task-check ${t.done?'checked':''}"></div>
+    <div class="task-body">
+      <div class="task-text ${t.done?'done':''}">${t.title}</div>
+      <div class="task-meta">
+        <span class="task-xp">+${t.xp} XP</span>
+        <span class="task-pri ${pc}">${pl}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderIdeas() {
+  const el = document.getElementById('ideasContent');
+  const proj = getActiveProject();
+  
+  if (!proj) { el.innerHTML = noProjectHTML(); return; }
+  
+  const starred = proj.ideas.filter(i => i.starred);
+  const regular = proj.ideas.filter(i => !i.starred);
+  
+  let html = '';
+  
+  if (proj.ideas.length === 0) {
+    html = `<div class="empty-state"><div class="empty-icon">💡</div><div class="empty-text">Идей пока нет. Запиши первую мысль!</div></div>`;
+  } else {
+    if (starred.length) {
+      html += `<div class="section-header"><div class="section-title">⭐ Избранное</div></div>`;
+      starred.forEach(i => { html += ideaHTML(i); });
+    }
+    if (regular.length) {
+      html += `<div class="section-header" style="margin-top:${starred.length?'8px':'0'}"><div class="section-title">Все идеи</div></div>`;
+      regular.forEach(i => { html += ideaHTML(i); });
+    }
+  }
+  
+  html += `<button class="btn btn-primary" onclick="openModal('idea')" style="margin-top:8px">＋ Новая идея</button>`;
+  el.innerHTML = html;
+}
+
+function ideaHTML(i) {
+  return `<div class="idea-item ${i.starred?'starred':''}">
+    <div class="idea-header">
+      <div class="idea-title">${i.title}</div>
+      <div class="idea-star" onclick="event.stopPropagation();toggleStar(${i.id})">${i.starred?'⭐':'☆'}</div>
+    </div>
+    ${i.text ? `<div class="idea-text">${i.text}</div>` : ''}
+    <div class="idea-date">${i.date}</div>
+  </div>`;
+}
+
+function renderStats() {
+  const el = document.getElementById('statsContent');
+  
+  const totalProjects = state.projects.length;
+  const allTasks = state.projects.reduce((a,p) => a + p.tasks.length, 0);
+  const doneTasks = state.projects.reduce((a,p) => a + p.tasks.filter(t=>t.done).length, 0);
+  const allIdeas = state.projects.reduce((a,p) => a + p.ideas.length, 0);
+  const allMilestones = state.projects.reduce((a,p) => a + p.milestones.length, 0);
+  const doneMilestones = state.projects.reduce((a,p) => a + p.milestones.filter(m=>m.status==='done').length, 0);
+  
+  const achievements = [
+    { icon:'🚀', name:'Старт', desc:'Создать первый проект', unlocked: totalProjects >= 1 },
+    { icon:'✅', name:'Первый шаг', desc:'Выполнить задачу', unlocked: doneTasks >= 1 },
+    { icon:'💡', name:'Мыслитель', desc:'Записать 5 идей', unlocked: allIdeas >= 5 },
+    { icon:'🔥', name:'Стрик 3', desc:'3 дня подряд', unlocked: (state.streak||0) >= 3 },
+    { icon:'⚡', name:'XP 100', desc:'Набрать 100 XP суммарно', unlocked: state.xp + (state.level-1)*100 >= 100 },
+    { icon:'🏆', name:'Мастер', desc:'10 задач выполнено', unlocked: doneTasks >= 10 },
+    { icon:'🗺️', name:'Стратег', desc:'5 этапов выполнено', unlocked: doneMilestones >= 5 },
+    { icon:'💎', name:'LVL 5', desc:'Достичь уровня 5', unlocked: state.level >= 5 },
+    { icon:'👑', name:'CEO Mode', desc:'3+ активных проекта', unlocked: totalProjects >= 3 },
+  ];
+  
+  const xpPerLevel = 100 + (state.level - 1) * 50;
+  
+  let html = `
+    <div class="streak-display">
+      <div class="streak-num">${state.streak || 0}</div>
+      <div class="streak-label">
+        <strong>🔥 STREAK</strong>
+        Дней активности подряд
+      </div>
+    </div>
+    
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-num">${state.level}</div>
+        <div class="stat-label">Уровень</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" style="color:var(--gold)">${state.xp}</div>
+        <div class="stat-label">XP сейчас</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" style="color:var(--green)">${doneTasks}</div>
+        <div class="stat-label">Задач ✅</div>
+      </div>
+    </div>
+    
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-num" style="color:var(--accent2)">${totalProjects}</div>
+        <div class="stat-label">Проектов</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" style="color:#f97316">${allIdeas}</div>
+        <div class="stat-label">Идей</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" style="color:var(--accent)">${doneMilestones}/${allMilestones}</div>
+        <div class="stat-label">Этапы</div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">ДОСТИЖЕНИЯ <span>${achievements.filter(a=>a.unlocked).length}/${achievements.length}</span></div>
+      <div class="achieve-grid">`;
+  
+  achievements.forEach(a => {
+    html += `<div class="achieve-item ${a.unlocked?'unlocked':''}" title="${a.desc}">
+      <div class="achieve-icon">${a.icon}</div>
+      <div class="achieve-name">${a.name}</div>
+    </div>`;
+  });
+  
+  html += `</div></div>`;
+  
+  // Project breakdown
+  if (state.projects.length) {
+    html += `<div class="card"><div class="card-title">ПРОЕКТЫ</div>`;
+    state.projects.forEach(p => {
+      const tot = p.tasks.length;
+      const don = p.tasks.filter(t=>t.done).length;
+      const pct = tot ? Math.round((don/tot)*100) : 0;
+      html += `<div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:13px;color:${p.color}">${p.name}</span>
+          <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text3)">${pct}%</span>
+        </div>
+        <div class="proj-progress"><div class="proj-progress-fill" style="width:${pct}%;background:linear-gradient(90deg,${p.color},${p.color}88)"></div></div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  
+  el.innerHTML = html;
+}
+
+function noProjectHTML() {
+  return `<div class="no-project">
+    <div class="no-project-icon">🚀</div>
+    <div class="no-project-title">НЕТ ПРОЕКТА</div>
+    <div class="no-project-sub">Создай первый проект чтобы начать</div>
+    <button class="btn btn-primary" style="max-width:240px;margin:0 auto" onclick="openModal('project')">＋ Создать проект</button>
+  </div>`;
+}
+
+// ================== TAB SWITCHING ==================
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  state.currentTab = tab;
+  save();
+  
+  if (tab === 'roadmap') renderRoadmap();
+  else if (tab === 'tasks') renderTasks();
+  else if (tab === 'ideas') renderIdeas();
+  else if (tab === 'stats') renderStats();
+}
+
+// ================== FAB ==================
+function handleFab() {
+  const map = { roadmap: 'milestone', tasks: 'task', ideas: 'idea', stats: null };
+  const modal = map[state.currentTab];
+  if (!modal) { openModal('project'); return; }
+  if (!getActiveProject()) { openModal('project'); return; }
+  openModal(modal);
+}
+
+// ================== MODALS ==================
+function openModal(name) {
+  document.getElementById('modal-'+name).classList.add('open');
+  setTimeout(() => {
+    const inp = document.querySelector(`#modal-${name} .form-input`);
+    if (inp) inp.focus();
+  }, 300);
+}
+
+function closeModal(name) {
+  document.getElementById('modal-'+name).classList.remove('open');
+}
+
+// Close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', function(e) {
+    if (e.target === this) {
+      const name = this.id.replace('modal-','');
+      closeModal(name);
+    }
+  });
+});
+
+// ================== UTILS ==================
+function shake(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.animation = 'none';
+  el.style.borderColor = 'var(--red)';
+  setTimeout(() => el.style.borderColor = '', 1000);
+}
+
+// Telegram Web App integration
+try {
+  if (window.Telegram && window.Telegram.WebApp) {
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    tg.setHeaderColor('#090c12');
+    tg.setBackgroundColor('#090c12');
+  }
+} catch(e) {}
+</script>
+</body>
+</html>
