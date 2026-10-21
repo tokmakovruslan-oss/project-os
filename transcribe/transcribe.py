@@ -58,7 +58,10 @@ def transcribe(path, model_name, language, device, compute_type, verbatim, check
     else:
         checkpoint.unlink(missing_ok=True)
 
+    print("  загружаю модель в память (1–2 минуты)...", file=sys.stderr, flush=True)
     model = WhisperModel(model_name, device=device, compute_type=compute_type)
+    print("  читаю аудио и распознаю первый фрагмент (ещё 1–3 минуты)...",
+          file=sys.stderr, flush=True)
     prompt = VERBATIM_PROMPTS.get(language or "ru") if verbatim else None
     segments, info = model.transcribe(
         str(path),
@@ -86,8 +89,9 @@ def transcribe(path, model_name, language, device, compute_type, verbatim, check
                                   ensure_ascii=False) + "\n")
             ckpt.flush()
             os.fsync(ckpt.fileno())
-            print(f"\r  обработано: {fmt_ts(seg.end)} / {fmt_ts(info.duration)}",
-                  end="", file=sys.stderr, flush=True)
+            snippet = seg.text.strip()[-50:]
+            print(f"\r\033[K  обработано: {fmt_ts(seg.end)} / {fmt_ts(info.duration)}"
+                  f"  …{snippet}", end="", file=sys.stderr, flush=True)
     print(file=sys.stderr)
     return words, info
 
