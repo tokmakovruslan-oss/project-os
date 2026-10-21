@@ -16,6 +16,7 @@
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -37,8 +38,25 @@ def fmt_ts(seconds, srt=False):
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 
-def transcribe(path, model_name, language, device, compute_type, verbatim):
+def transcribe(path, model_name, language, device, compute_type, verbatim, checkpoint, restart):
     from faster_whisper import WhisperModel
+
+    words, resume_at = [], 0.0
+    if checkpoint.exists() and not restart:
+        good = []
+        for line in checkpoint.read_text(encoding="utf-8").splitlines():
+            try:
+                seg = json.loads(line)
+            except json.JSONDecodeError:
+                break  # строка недописана из-за выключения — её сегмент пересчитаем
+            good.append(line)
+            words.extend(seg["words"])
+            resume_at = seg["end"]
+        checkpoint.write_text("".join(l + "\n" for l in good), encoding="utf-8")
+        print(f"  продолжаю с {fmt_ts(resume_at)} (сохранено в {checkpoint.name})",
+              file=sys.stderr)
+    else:
+        checkpoint.unlink(missing_ok=True)
 
     model = WhisperModel(model_name, device=device, compute_type=compute_type)
     prompt = VERBATIM_PROMPTS.get(language or "ru") if verbatim else None
@@ -50,20 +68,26 @@ def transcribe(path, model_name, language, device, compute_type, verbatim):
         # Без опоры на предыдущий текст модель меньше «додумывает» и не зацикливается.
         condition_on_previous_text=False,
         beam_size=5,
+        clip_timestamps=[resume_at],  # пропускаем уже расшифрованное
         vad_filter=False,  # не выкидываем тихие куски — нужна каждая секунда
     )
 
-    words = []
-    for seg in segments:
-        for w in seg.words or []:
-            words.append({
+    with checkpoint.open("a", encoding="utf-8") as ckpt:
+        for seg in segments:
+            seg_words = [{
                 "start": round(w.start, 3),
                 "end": round(w.end, 3),
                 "word": w.word,
                 "prob": round(w.probability, 3),
-            })
-        print(f"\r  обработано: {fmt_ts(seg.end)} / {fmt_ts(info.duration)}",
-              end="", file=sys.stderr, flush=True)
+            } for w in seg.words or []]
+            words.extend(seg_words)
+            # Сохраняем каждый сегмент сразу: если процесс прервётся, начнём отсюда.
+            ckpt.write(json.dumps({"end": round(seg.end, 3), "words": seg_words},
+                                  ensure_ascii=False) + "\n")
+            ckpt.flush()
+            os.fsync(ckpt.fileno())
+            print(f"\r  обработано: {fmt_ts(seg.end)} / {fmt_ts(info.duration)}",
+                  end="", file=sys.stderr, flush=True)
     print(file=sys.stderr)
     return words, info
 
@@ -113,6 +137,8 @@ def main():
     p.add_argument("--out-dir", type=Path, help="куда сохранить (по умолчанию рядом с файлом)")
     p.add_argument("--empty-seconds", action="store_true",
                    help="выводить и пустые секунды (тишину), чтобы была строка на каждую секунду")
+    p.add_argument("--restart", action="store_true",
+                   help="начать заново, не продолжая с сохранённого места")
     p.add_argument("--no-verbatim", action="store_true",
                    help="не подталкивать модель сохранять слова-паразиты и повторы")
     args = p.parse_args()
@@ -121,13 +147,15 @@ def main():
         sys.exit(f"Файл не найден: {args.audio}")
     language = None if args.language == "auto" else args.language
 
-    print(f"Модель {args.model}, файл {args.audio.name}", file=sys.stderr)
-    words, info = transcribe(args.audio, args.model, language, args.device,
-                             args.compute_type, not args.no_verbatim)
-    lines = group_by_second(words, info.duration, args.empty_seconds)
-
     out_dir = args.out_dir or args.audio.parent
     out_dir.mkdir(parents=True, exist_ok=True)
+    checkpoint = out_dir / f"{args.audio.stem}.partial.jsonl"
+
+    print(f"Модель {args.model}, файл {args.audio.name}", file=sys.stderr)
+    words, info = transcribe(args.audio, args.model, language, args.device,
+                             args.compute_type, not args.no_verbatim,
+                             checkpoint, args.restart)
+    lines = group_by_second(words, info.duration, args.empty_seconds)
     renderers = {
         "txt": lambda: to_txt(lines),
         "srt": lambda: to_srt(lines),
@@ -140,6 +168,7 @@ def main():
         dest.write_text(renderers[fmt](), encoding="utf-8")
         print(f"Сохранено: {dest}", file=sys.stderr)
 
+    checkpoint.unlink(missing_ok=True)
     sys.stdout.write(to_txt(lines))
 
 
